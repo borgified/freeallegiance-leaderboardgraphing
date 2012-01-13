@@ -1,0 +1,20 @@
+=head1 GRAPH
+
+B<graph.pl> - visual representation of leaderboard stats
+
+=head1 SYNOPSIS
+inputs: stat, callsign, duration
+stat can be one of (mu,sigma,rank,wins,losses,draws,defects,stack_rating,
+cmd_mu,cmd_sigma,cmd_rank,cm_wins,cmd_losses,cmd_draws,kills,ejects,drn_kills,
+stn_kills,stn_caps,kills_per_ejects,hrs_played,kills_per_hr)
+
+callsign: up to 7 max or however many colors we can accomodate on a graph
+and still be able to distinguish one color from another
+
+duration: past_week,past_month,show_all
+
+=head1 DESCRIPTION
+graph.pl - make pretty graphs from collected stats from http://leaderboard.alleg.net
+snapshots of the leaderboard are collected regularly and stored into a database
+using another script.
+=cut
