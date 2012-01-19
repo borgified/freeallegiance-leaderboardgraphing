@@ -27,11 +27,43 @@ my %stats;
 
 while(my @row = $sth->fetchrow_array()){
 	print "@row\n";
+
+	#does callsign exist?
+	if(exists($stats{$row[2]}{'mu'})){
+
+		#have the stats changed from last time?
+		if(&haschanged(@row)){
+			#get prev entries from hash and output to db table
+			#update all new stats in hash
+		}else{
+			#this is duplicate
+			#update timestamp
+			$stats{$row[2]}{'timestamp'}=$row[-1];
+		} 
+
+	}else{
+		#callsign doesnt exist
+		my $i=3;
+		foreach my $item (@categories){
+			$stats{$row[2]}{$item}=$row[$i];
+			print "$row[2] : $item $row[$i]\n";
+			$i++;
+		}
+	}
+}
+
+sub haschanged {
+#returns 0 if all stats except timestamp have not changed
+#returns 1 if any stats except timestamp have changed
+	my $callsign=$_[2];
+
 	my $i=3;
 	foreach my $item (@categories){
-		$stats{$row[2]}{$item}=$row[$i];
-		print "$row[2] : $item $row[$i]\n";
+		if($stats{$callsign}{$item} != $row[$i]){
+			return 1;
+		}
 		$i++;
 	}
+return 0;
 }
 
