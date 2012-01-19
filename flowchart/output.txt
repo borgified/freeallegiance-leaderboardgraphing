@@ -1,0 +1,28 @@
+                              +----------------------+                  
+                              |                      |                  
+                              | does callsign exist? |                  
+                              |                      |                  
+                              +Y--------------------N+                  
+                               |                    |                   
+                +--------------+                    +--+                
+                |                                      |                
+               +V------------+                        +V------------+   
+               |             |                        |             |   
+               | changed     |                        | add to hash |   
+               | from last   |                        | .           |   
+               | time?       |                        | next        |   
+               |             |                        | iteration   |   
+               +Y-----------N+                        |             |   
+ +--------------+           +-------+                 +-------------+   
++V---------------------------+     +V------------+                      
+|                            |     |             |                      
+| get prev entries from hash |     | this is a   |                      
+| and put them in db table   |     | duplicate   |                      
+| .                          |     | .           |                      
+| update all the current     |     | update      |                      
+| stats for this callsign in |     | timestamp   |                      
+| the hash                   |     | .           |                      
+| .                          |     | goto next   |                      
+| goto next iteration        |     | iteration   |                      
+|                            |     |             |                      
++----------------------------+     +-------------+                      
