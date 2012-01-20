@@ -53,15 +53,19 @@ while(my @row = $sth->fetchrow_array()){
 			#update all new stats in hash
 			$DEBUG && print "updating stats in hash with new values\n";
 			my $i=0;
+			$DEBUG && print "STORED: ";
 			foreach my $item (@categories){
 				$stats{$row[2]}{$item}=$row[$i];
+				$DEBUG && print "$row[$i],";
 				$i++;
 			}
+			$DEBUG && print "\n";
 			
 		}else{
 			$DEBUG && print "duplicate confirmed\n";
 			#this is duplicate
 			#update timestamp
+			$DEBUG && print "id: $stats{$row[2]}{'id'} is now $row[0]\n";
 			$stats{$row[2]}{'id'}=$row[0];
 			$stats{$row[2]}{'timestamp'}=$row[-3];
 		} 
@@ -111,5 +115,6 @@ sub dumptofile {
 		$output = $output . "$stats{$row[2]}{$item},";
 	}
 	chop($output); #remove that last comma
+	$DEBUG && print "DUMPED: $output\n";
 	print $fh "$output\n";
 }
