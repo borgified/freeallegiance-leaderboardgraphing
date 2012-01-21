@@ -5,6 +5,7 @@ use DBI;
 use strict;
 
 my $DEBUG=0;
+my $dup_counter=0;
 
 my $my_cnf = '~/scripts/secret/my_cnf.cnf';
 
@@ -21,7 +22,7 @@ my $dbh = DBI->connect(
     {RaiseError => 1}
 ) or  die "DBI::errstr: $DBI::errstr";
 
-my $query="select * from stats limit 100";
+my $query="select * from stats";
 #my $query="select * from stats limit 10";
 my $sth=$dbh->prepare($query);
 $sth->execute();
@@ -32,7 +33,6 @@ my @categories = qw/id place callsign mu sigma rank wins losses draws defects st
 #status and lgp should be ignored as well
 
 my %stats;
-my $duplicate_counter=0;
 
 while(my @row = $sth->fetchrow_array()){
 	$DEBUG && print "-----------------------------------\n";
@@ -60,6 +60,7 @@ while(my @row = $sth->fetchrow_array()){
 				$DEBUG && print "$row[$i],";
 				$i++;
 			}
+			$stats{$row[2]}{'dumped'}=0;
 			$DEBUG && print "\n";
 			
 		}else{
@@ -69,7 +70,8 @@ while(my @row = $sth->fetchrow_array()){
 			$DEBUG && print "id: $stats{$row[2]}{'id'} is now $row[0]\n";
 			$stats{$row[2]}{'id'}=$row[0];
 			$stats{$row[2]}{'timestamp'}=$row[-3];
-			print ++$duplicate_counter."\r";
+			$stats{$row[2]}{'dumped'}=0;
+			print $dup_counter++." duplicates found\n";
 		} 
 
 	}else{
@@ -81,6 +83,7 @@ while(my @row = $sth->fetchrow_array()){
 			#print "$row[2] : $item $row[$i]\n";
 			$i++;
 		}
+		$stats{$row[2]}{'dumped'}=1;
 		$DEBUG && print "dumping to file\n";
 		$"=',';
 		print $fh "@row\n";
@@ -93,15 +96,19 @@ $DEBUG && print "******************************\n";
 $DEBUG && print "dumping remaining stuff in the hash\n";
 my $output="";
 foreach my $callsign (keys %stats){
-	foreach my $category (@categories){
-		$output = $output . "$stats{$callsign}{$category},";
+	if($stats{$callsign}{'dumped'} == 1){
+	#this is to make sure we dont dump a second time those entries that got stored in hash but never ever got matched again
+	#(they were already dumped when it was encountered the first time)
+		next;
+	}else{
+		foreach my $category (@categories){
+			$output = $output . "$stats{$callsign}{$category},";
+		}
+		chop($output); #remove last comma
+		$output=$output."\n";
 	}
-	chop($output); #remove last comma
-	$output=$output."\n";
 }
 print $fh $output;
-
-
 
 
 ###################### SUBROUTINES START
