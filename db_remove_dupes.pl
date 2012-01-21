@@ -4,7 +4,7 @@ use warnings;
 use DBI;
 use strict;
 
-my $DEBUG=1;
+my $DEBUG=0;
 
 my $my_cnf = '~/scripts/secret/my_cnf.cnf';
 
@@ -21,7 +21,7 @@ my $dbh = DBI->connect(
     {RaiseError => 1}
 ) or  die "DBI::errstr: $DBI::errstr";
 
-my $query="select * from stats where callsign = 'fwiffo' limit 50";
+my $query="select * from stats limit 100";
 #my $query="select * from stats limit 10";
 my $sth=$dbh->prepare($query);
 $sth->execute();
@@ -32,6 +32,7 @@ my @categories = qw/id place callsign mu sigma rank wins losses draws defects st
 #status and lgp should be ignored as well
 
 my %stats;
+my $duplicate_counter=0;
 
 while(my @row = $sth->fetchrow_array()){
 	$DEBUG && print "-----------------------------------\n";
@@ -68,6 +69,7 @@ while(my @row = $sth->fetchrow_array()){
 			$DEBUG && print "id: $stats{$row[2]}{'id'} is now $row[0]\n";
 			$stats{$row[2]}{'id'}=$row[0];
 			$stats{$row[2]}{'timestamp'}=$row[-3];
+			print ++$duplicate_counter."\r";
 		} 
 
 	}else{
@@ -85,6 +87,25 @@ while(my @row = $sth->fetchrow_array()){
 		$"=' ';
 	}
 }
+
+#dump whatever else is left in %stats, there are no entries to try to match them with anything
+$DEBUG && print "******************************\n";
+$DEBUG && print "dumping remaining stuff in the hash\n";
+my $output="";
+foreach my $callsign (keys %stats){
+	foreach my $category (@categories){
+		$output = $output . "$stats{$callsign}{$category},";
+	}
+	chop($output); #remove last comma
+	$output=$output."\n";
+}
+print $fh $output;
+
+
+
+
+###################### SUBROUTINES START
+
 
 sub haschanged {
 #returns 0 if all stats except timestamp,status,lgp have not changed
@@ -110,7 +131,7 @@ return 0;
 
 sub dumptofile {
 	my @row = @_;
-	my $output = "=";
+	my $output = "";
 	foreach my $item (@categories){
 		$output = $output . "$stats{$row[2]}{$item},";
 	}
