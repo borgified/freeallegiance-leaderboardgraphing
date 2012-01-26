@@ -32,15 +32,59 @@ use CGI qw/:standard/;
 #my($stat,$duration,@callsigns)=@ARGV;
 my $query=new CGI;
 
-my $stat=$query->param('stat');
+my @stats=$query->param('stats');
+my @colors=$query->param('color');
 my $duration=$query->param('duration');
 my @callsigns=$query->param('callsigns');
 
-#hardcoded values for testing
-$stat="drn_kills";
-$duration="past_week";
-@callsigns=("fwiffo");
+
+#######hardcoded values for testing
+@stats=("hrs_played","drn_kills","stn_caps");
+$duration="show_all";
+@callsigns=("fwiffo","pkunk","spideycw");
 ##############################
+
+#@stats=('sigma','Sigma','23j',' sigma','drn_kills');
+#@stats=(' sigma','drn_kills');
+#@callsigns=('fwiffo','jki_kdjf3','$jexit=&','#+=ajaj');
+#@colors=('FFFFFF','ZJDKFJ');
+##$duration="last_(?{print 'hello';})week";
+#$duration="show_all";
+
+#########sanitize inputs
+
+my @known_stats = qw/mu sigma rank wins losses draws defects stack_rating cmd_mu cmd_sigma cmd_rank cmd_wins cmd_losses cmd_draws kills ejects drn_kills stn_kills stn_caps kills_per_ejects hrs_played kills_per_hr/;
+my %known_categories;
+foreach my $known_stat (@known_stats){
+	$known_categories{$known_stat}="";
+}
+@stats = map { (my $s = $_) =~ s/[^a-z_]*//g; $s} @stats;
+foreach my $stat (@stats){
+	if(!exists($known_categories{$stat})){
+		die "illegal stat: $stat (valid stats: @known_stats)";
+	}
+}
+#----------------------
+@colors = map { (my $s =$_) =~ s/[^A-Fa-f0-9]*//g; $s } @colors;
+foreach my $color (@colors){
+	if(!(hex($color) >= 0 && hex($color) <= 0xFFFFFF)){
+		die "color not in range: $color (valid range: 0x000000 - 0xFFFFFF)";
+	}
+}
+#----------------------
+if(defined($duration) && $duration ne ''){
+	$duration =~ s/[^lastwekmonth_]*//g;
+}else{
+	die "duration is undefined";
+}
+if($duration !~ /\blast_week\b|\blast_month\b|\bshow_all\b/){
+	die "unrecognized duration: $duration (valid choices: last_week, last_month, show_all)";
+}
+#----------------------
+@callsigns = map {(my $s=$_) =~ s/[^A-Za-z0-9_]*//g; $s } @callsigns;
+#----------------------
+
+
 
 my $my_cnf = '~/scripts/secret/my_cnf.cnf';
 
@@ -55,28 +99,23 @@ my $dbh = DBI->connect(
     {RaiseError => 1}
 ) or  die "DBI::errstr: $DBI::errstr";
 
-my $img = Chart::Strip->new(title   => $stat,
+my $img = Chart::Strip->new(
 			    x_label => '',
 			    y_label => '',
 			    transparent => 0,
+				draw_data_labels => 1,
+				data_label_style => 'box',
+				width => '1200',
+				height => '600',
 			    );
 
+
+#TODO: implement color picker################
 my $color;
-my @colors=("000000","0000FF","00FF00","00FFFF","FF0000","FF6600","FF00FF");
-my $num_colors=@colors;
+#############################################
 
-sub fisher_yates_shuffle {
-	my $deck = shift;  # $deck is a reference to an array
-    my $i = @$deck;
-    while ($i--) {
-		my $j = int rand ($i+1);
-        @$deck[$i,$j] = @$deck[$j,$i];
-    }
-}
 
-&fisher_yates_shuffle(\@colors);
-
-foreach my $callsign (@callsigns) {
+foreach my $stat (@stats) {
 	my $sth;
 	my $duration_str;
 
@@ -88,34 +127,29 @@ foreach my $callsign (@callsigns) {
 		$duration_str=' ';
 	}
 
-	my $query="select timestamp,".$stat." from stats where callsign=\'".$callsign."\' ".$duration_str." order by timestamp";
+	foreach my $callsign (@callsigns) {
 
-	$sth=$dbh->prepare($query);
+		my $query="select timestamp,".$stat." from newstats where callsign=\'".$callsign."\' ".$duration_str." order by timestamp";
 
-	$sth->execute();
+		$sth=$dbh->prepare($query);
 
-	my($data);
-	my $once=1;
-	my($zeroed_stat)=0;
+		$sth->execute();
 
-	while(my($timestamp,$chosen_stat)=$sth->fetchrow_array()){
-		if($once==1 && $duration =~ /past_/ ){
-			$zeroed_stat=$chosen_stat;
-			$once=0;
+		my($data);
+		my $once=1;
+		my($zeroed_stat)=0;
+
+		while(my($timestamp,$chosen_stat)=$sth->fetchrow_array()){
+			if($once==1 && $duration =~ /past_/ ){
+				$zeroed_stat=$chosen_stat;
+				$once=0;
+			}
+			$chosen_stat=$chosen_stat-$zeroed_stat;
+			my $unixdate=UnixDate(ParseDate($timestamp),"%s");
+			push @$data, {time => $unixdate, value => $chosen_stat};
 		}
-		$chosen_stat=$chosen_stat-$zeroed_stat;
-		my $unixdate=UnixDate(ParseDate($timestamp),"%s");
-		push @$data, {time => $unixdate, value => $chosen_stat};
+		$img->add_data( $data, { label => $callsign."(".$stat.")", style => 'line',   color => $color } );
 	}
-
-	$color=pop(@colors);
-	if(!defined($color)){
-		print "too many callsigns (>$num_colors), ran out of colors!\n";
-		exit;
-	}
-	
-	$img->add_data( $data, { label => $callsign, style => 'line',   color => $color } );
-
 #debugging output to stdout
 #	print "$callsign\n";
 #	foreach my $item (@$data){

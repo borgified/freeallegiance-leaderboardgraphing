@@ -11,7 +11,7 @@ unless($action=$query->param('submit')){
 print header;
 print start_html;
 $callsigns=$query->param('callsigns');
-$stat=$query->param('stat');
+$stats=$query->param('stats');
 $duration=$query->param('duration');
 
 print <<END;
@@ -20,7 +20,7 @@ print <<END;
 <p>use comma to separate multiple callsigns (7 max)
 <p>1. callsigns <input type="text" name="callsigns" value="$callsigns" size="80"></p><br>
 type in your callsign EXACTLY as it appears on the leaderboard<br>
-<p>2. pick ONE stat: <input type="text" id="stat" name="stat" value="$stat" size="12">(graphing multiple stats on the
+<p>2. pick ONE stat: <input type="text" id="stats" name="stats" value="$stats" size="12">(graphing multiple stats on the
 same graph is not implemented)<br>
 stat choices:
 <div style="overflow:auto;">
